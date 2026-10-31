@@ -1,0 +1,20 @@
+{% extends 'grader/base.html' %}
+{% block content %}
+<h1>考卷</h1>
+<form method="post" class="inline-form">
+  {% csrf_token %}
+  {{ form.name.label_tag }} {{ form.name }}
+  <button type="submit">新增考卷</button>
+  {{ form.name.errors }}
+</form>
+{% if exams %}
+  <ul class="exam-list">
+    {% for e in exams %}
+      <li><a href="{% url 'grader:exam_overview' e.id %}">{{ e.name }}</a>
+        <span class="muted">（<a href="{% url 'grader:exam_settings' e.id %}">設定</a>）</span></li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="muted">還沒有考卷，先新增一份。</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends 'grader/base.html' %}
+{% block content %}
+<h1>上傳結果</h1>
+<ul>
+  <li>學生：{{ report.students|length }} 位</li>
+  <li>新增：{{ report.created }} 份，更新：{{ report.updated }} 份，內容相同未變：{{ report.unchanged }} 份</li>
+</ul>
+{% if report.warnings %}
+  <h2 class="warn">警告（{{ report.warnings|length }}）— 這些檔案沒有匯入</h2>
+  <ul class="warnings">
+    {% for w in report.warnings %}<li>{{ w }}</li>{% endfor %}
+  </ul>
+{% endif %}
+<p><a class="button primary" href="{% url 'grader:exam_overview' exam.id %}">前往總覽</a></p>
+{% endblock %}

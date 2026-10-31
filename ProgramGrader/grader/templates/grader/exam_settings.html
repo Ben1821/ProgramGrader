@@ -1,0 +1,58 @@
+{% extends 'grader/base.html' %}
+{% block title %}{{ exam.name }} 設定{% endblock %}
+{% block content %}
+<h1>考卷設定</h1>
+<form method="post">
+  {% csrf_token %}
+  <section>
+    {{ form.name.label_tag }} {{ form.name }} {{ form.name.errors }}
+  </section>
+
+  <section>
+    <h2>題目</h2>
+    <p class="hint">每題：測資全過得配分的 1/2，沒全過（含超時、執行錯誤）得 1/4；另外 1/2 由下方評分項目人工評。最下面的空白列可新增題目。</p>
+    {{ questions.management_form }}
+    {{ questions.non_form_errors }}
+    <table class="grid">
+      <tr><th>題號</th><th>配分</th><th>時間限制（秒）</th><th>順序</th><th>測資</th><th></th></tr>
+      {% for f in questions %}
+        <tr>
+          <td>{{ f.id }}{{ f.code }}{{ f.code.errors }}</td>
+          <td>{{ f.points }}{{ f.points.errors }}</td>
+          <td>{{ f.time_limit }}{{ f.time_limit.errors }}</td>
+          <td>{{ f.order }}</td>
+          <td>
+            {% if f.instance.pk %}
+              <a href="{% url 'grader:question_cases' f.instance.pk %}">{{ f.instance.cases.count }} 組測資</a>
+              {% if not f.instance.cases.exists %}<div class="warn">此題沒有測資，將視為全部通過</div>{% endif %}
+            {% else %}<span class="muted">儲存後可設定</span>{% endif %}
+          </td>
+          <td>{% if f.instance.pk %}<a class="danger" href="{% url 'grader:question_delete' f.instance.pk %}">刪除</a>{% endif %}</td>
+        </tr>
+      {% endfor %}
+    </table>
+    <p class="hint">題號：{{ questions.empty_form.code.help_text }}。配分：{{ questions.empty_form.points.help_text }}。時間限制：{{ questions.empty_form.time_limit.help_text }}。</p>
+  </section>
+
+  <section>
+    <h2>人工評分項目</h2>
+    <p class="hint">每題人工部分的總額是配分的 1/2，依比例分給各項。{{ criteria.empty_form.weight.help_text }}。最下面的空白列可新增項目。</p>
+    {{ criteria.management_form }}
+    {% if criteria.non_form_errors %}<div class="error">{{ criteria.non_form_errors }}</div>{% endif %}
+    <table class="grid">
+      <tr><th>項目名稱</th><th>比例 (%)</th><th>說明</th><th>順序</th><th></th></tr>
+      {% for f in criteria %}
+        <tr>
+          <td>{{ f.id }}{{ f.name }}{{ f.name.errors }}</td>
+          <td>{{ f.weight }}{{ f.weight.errors }}</td>
+          <td>{{ f.description }}</td>
+          <td>{{ f.order }}</td>
+          <td>{% if f.instance.pk %}<a class="danger" href="{% url 'grader:criterion_delete' f.instance.pk %}">刪除</a>{% endif %}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  </section>
+
+  <button type="submit" class="primary">儲存設定</button>
+</form>
+{% endblock %}

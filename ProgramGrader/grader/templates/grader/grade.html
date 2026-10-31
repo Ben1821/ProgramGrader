@@ -1,0 +1,70 @@
+{% extends 'grader/base.html' %}
+{% load grader_extras %}
+{% block title %}{{ question.code }} 批改{% endblock %}
+{% block content %}
+<div class="grade-head">
+  <h1>{{ question.code }}（配分 {{ question.points|score }}）</h1>
+  <span>進度 {{ graded_count }} / {{ submitted_count }}</span>
+</div>
+<div class="grade-layout">
+  <aside class="roster">
+    {% for sid, status in roster %}
+      {% if status == 'missing' %}
+        <div class="roster-item missing">{{ sid }} 未交</div>
+      {% else %}
+        <a class="roster-item {{ status }}{% if sid == current %} current{% endif %}"
+           href="?student={{ sid|urlencode }}">{% if status == 'done' %}✔{% else %}✋{% endif %} {{ sid }}</a>
+      {% endif %}
+    {% endfor %}
+  </aside>
+
+  {% if not sub %}
+    <section class="grade-main">
+      {% if current %}
+        <p>{{ current }} 這題未交，不需評分（0 分）。</p>
+      {% else %}
+        <p>此題已全部改完 🎉</p>
+      {% endif %}
+      <p><a href="{% url 'grader:exam_overview' exam.id %}">← 回總覽</a></p>
+    </section>
+  {% else %}
+    <section class="grade-main">
+      <h2>{{ sub.student_id }} <span class="muted">{{ sub.filename }}</span></h2>
+      <pre class="code">{% for line in lines %}<span class="ln">{{ forloop.counter }}</span>{{ line }}
+{% endfor %}</pre>
+      <h3>測資：{% if sub.tests_passed %}<span class="ok">全部通過</span>{% else %}<span class="bad">未全過</span>{% endif %}
+        → 測資分 {{ test_points|score }}</h3>
+      {% for r in sub.test_results %}
+        <details class="case-result {{ r.status }}" {% if r.status != 'pass' %}open{% endif %}>
+          <summary>第 {{ forloop.counter }} 組：{% if r.status == 'pass' %}通過{% elif r.status == 'fail' %}輸出不符{% elif r.status == 'timeout' %}超時{% else %}執行錯誤{% endif %}</summary>
+          <div class="case-cols">
+            <div><div class="label">輸入</div><pre>{{ r.input }}</pre></div>
+            <div><div class="label">預期</div><pre>{{ r.expected }}</pre></div>
+            <div><div class="label">實際</div><pre>{{ r.output }}</pre></div>
+          </div>
+          {% if r.stderr %}<div class="label">錯誤訊息</div><pre class="stderr">{{ r.stderr }}</pre>{% endif %}
+        </details>
+      {% empty %}
+        <p class="muted">此題沒有測資，視為全部通過。</p>
+      {% endfor %}
+    </section>
+
+    <aside class="grade-form">
+      <form method="post">
+        {% csrf_token %}
+        {% if needs_review %}<p class="warn">設定或程式碼已變更，請複查</p>{% endif %}
+        <p class="hint">人工分總額 {{ question.points|score }} 的 1/2。按 Enter 即儲存並跳下一位。</p>
+        {% for field in form %}
+          <div class="field">
+            {{ field.label_tag }}
+            {{ field }}
+            {% if field.help_text %}<div class="muted">{{ field.help_text }}</div>{% endif %}
+            {{ field.errors }}
+          </div>
+        {% endfor %}
+        <button type="submit" class="primary">儲存並下一位</button>
+      </form>
+    </aside>
+  {% endif %}
+</div>
+{% endblock %}

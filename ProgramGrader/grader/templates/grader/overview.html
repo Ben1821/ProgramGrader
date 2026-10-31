@@ -1,0 +1,35 @@
+{% extends 'grader/base.html' %}
+{% load grader_extras %}
+{% block title %}{{ exam.name }} 總覽{% endblock %}
+{% block content %}
+<h1>{{ exam.name }} 成績總覽</h1>
+{% if not questions %}
+  <p class="muted">還沒有題目，先到<a href="{% url 'grader:exam_settings' exam.id %}">設定</a>新增。</p>
+{% elif not rows %}
+  <p class="muted">還沒有作答，先去<a href="{% url 'grader:exam_upload' exam.id %}">上傳</a>。</p>
+{% else %}
+  <p class="hint">點題號從第一位待改的學生開始批改；點格子直接改那位學生。</p>
+  <table class="grid overview">
+    <tr>
+      <th>學號</th>
+      {% for q in questions %}<th><a href="{% url 'grader:grade' q.id %}">{{ q.code }}</a><div class="muted">{{ q.points|score }} 分</div></th>{% endfor %}
+      <th>總分</th>
+    </tr>
+    {% for row in rows %}
+      <tr>
+        <td>{{ row.student_id }}</td>
+        {% for q, sub, s, status in row.cells %}
+          <td class="cell-{{ status }}">
+            {% if status == 'missing' %}未交{% else %}
+              <a href="{% url 'grader:grade' q.id %}?student={{ row.student_id|urlencode }}">{{ s|score }}
+                {% if status == 'done' %}✔{% else %}✋待改{% endif %}</a>
+            {% endif %}
+          </td>
+        {% endfor %}
+        <td><strong>{{ row.total|score }}</strong>{% if not row.complete %}*{% endif %}</td>
+      </tr>
+    {% endfor %}
+  </table>
+  <p class="muted">✔ 已完成　✋ 待人工評分（目前只計測資分）　* 尚未改完</p>
+{% endif %}
+{% endblock %}

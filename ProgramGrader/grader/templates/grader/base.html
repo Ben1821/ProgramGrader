@@ -1,0 +1,29 @@
+{% load static %}<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ProgramGrader{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'grader/style.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <a href="{% url 'grader:exam_list' %}" class="brand">ProgramGrader</a>
+    {% if exam %}
+      <span class="crumb">› {{ exam.name }}</span>
+      <nav>
+        <a href="{% url 'grader:exam_overview' exam.id %}">總覽</a>
+        <a href="{% url 'grader:exam_settings' exam.id %}">設定</a>
+        <a href="{% url 'grader:exam_upload' exam.id %}">上傳</a>
+        <a href="{% url 'grader:exam_csv' exam.id %}">匯出 CSV</a>
+      </nav>
+    {% endif %}
+  </header>
+  <main>
+    {% for message in messages %}
+      <p class="msg msg-{{ message.tags }}">{{ message }}</p>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

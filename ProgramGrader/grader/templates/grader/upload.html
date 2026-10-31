@@ -1,0 +1,12 @@
+{% extends 'grader/base.html' %}
+{% block title %}{{ exam.name }} 上傳{% endblock %}
+{% block content %}
+<h1>上傳作業資料夾</h1>
+<p class="hint">選擇總資料夾（裡面可以有多個子資料夾）。系統只看檔名 <code>學號_題號.py</code>，例如 <code>D1234567_A01.py</code>。
+  再次上傳會覆蓋同學號同題的檔案並重跑測資，已填的人工分數會保留。上傳後會立刻跑測資，可能需要一點時間。</p>
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  <input type="file" name="files" webkitdirectory multiple required>
+  <button type="submit" class="primary">上傳並執行測資</button>
+</form>
+{% endblock %}

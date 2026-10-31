@@ -1,0 +1,82 @@
+:root {
+  --bg: #f7f7f5;
+  --panel: #ffffff;
+  --text: #1f2328;
+  --muted: #6b7280;
+  --line: #e2e2dd;
+  --accent: #2f6fdb;
+  --ok: #1f8a4c;
+  --bad: #c2410c;
+  --warn-bg: #fff7e6;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.6 -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+a { color: var(--accent); }
+main { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+h1 { font-size: 22px; margin: 0 0 12px; }
+h2 { font-size: 17px; margin: 20px 0 8px; }
+h3 { font-size: 15px; margin: 16px 0 8px; }
+
+.topbar { display: flex; align-items: center; gap: 12px; padding: 10px 24px;
+  background: var(--panel); border-bottom: 1px solid var(--line); }
+.topbar .brand { font-weight: 700; text-decoration: none; color: var(--text); }
+.topbar nav { margin-left: auto; display: flex; gap: 16px; }
+.crumb, .muted { color: var(--muted); }
+.hint { color: var(--muted); font-size: 14px; }
+.warn { color: var(--bad); }
+.error, .errorlist { color: var(--bad); }
+.errorlist { margin: 4px 0; padding-left: 18px; font-size: 13px; }
+.msg { padding: 8px 12px; border-radius: 6px; background: #e8f1ff; }
+.msg-warning { background: var(--warn-bg); }
+
+input, textarea, button { font: inherit; }
+input[type=text], input[type=number], textarea { padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; }
+textarea { width: 100%; font-family: var(--mono); }
+button, .button { padding: 6px 14px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--panel); cursor: pointer; text-decoration: none; color: var(--text); display: inline-block; }
+.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.danger { color: var(--bad); }
+.danger-btn { background: var(--bad); color: #fff; border-color: var(--bad); }
+.inline-form { margin: 12px 0; }
+
+table.grid { border-collapse: collapse; background: var(--panel); }
+table.grid th, table.grid td { border: 1px solid var(--line); padding: 6px 10px; vertical-align: top; }
+table.grid th { background: #f0f0ec; text-align: left; }
+table.grid input[type=number] { width: 90px; }
+.overview td, .overview th { text-align: center; }
+.overview a { text-decoration: none; }
+.cell-done { background: #eef8f1; }
+.cell-pending { background: var(--warn-bg); }
+.cell-missing { color: var(--muted); }
+
+.case { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; margin-bottom: 12px; }
+.case-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+
+.grade-head { display: flex; align-items: baseline; gap: 16px; }
+.grade-layout { display: grid; grid-template-columns: 170px 1fr 320px; gap: 16px; align-items: start; }
+.roster { background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  max-height: 80vh; overflow: auto; position: sticky; top: 12px; }
+.roster-item { display: block; padding: 4px 10px; text-decoration: none; color: var(--text); font-family: var(--mono); font-size: 13px; }
+.roster-item.missing { color: var(--muted); }
+.roster-item.done { color: var(--ok); }
+.roster-item.current { background: #e8f1ff; font-weight: 700; }
+.grade-main { min-width: 0; }
+pre { margin: 0; white-space: pre-wrap; word-break: break-all; font-family: var(--mono); font-size: 13px; }
+pre.code { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+.ln { display: inline-block; width: 3em; color: var(--muted); user-select: none; }
+.ok { color: var(--ok); }
+.bad { color: var(--bad); }
+.case-result { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; }
+.case-result.pass summary { color: var(--ok); }
+.case-result:not(.pass) summary { color: var(--bad); }
+.case-result pre { background: #f6f6f3; padding: 6px; border-radius: 4px; min-height: 1.6em; }
+.stderr { color: var(--bad); }
+.label { font-size: 12px; color: var(--muted); }
+.grade-form { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px;
+  position: sticky; top: 12px; }
+.grade-form .field { margin-bottom: 12px; }
+.grade-form label { display: block; font-weight: 600; }
+.grade-form input[type=number] { width: 100px; }
+@media (max-width: 900px) { .grade-layout { grid-template-columns: 1fr; } .roster, .grade-form { position: static; } }
