@@ -1,0 +1,8 @@
+.venv/
+.idea/
+.DS_Store
+.superpowers/
+__pycache__/
+*.pyc
+db.sqlite3
+**/.impeccable/config.local.json
