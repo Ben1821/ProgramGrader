@@ -195,8 +195,9 @@ class UploadAndOverviewTests(TestCase):
         Question.objects.create(exam=self.exam, code='A02', points=10, order=1)
         Submission.objects.create(question=self.q, student_id='S1', filename='', code='')
         r = self.client.get(reverse('grader:exam_overview', args=[self.exam.id]))
-        self.assertContains(r, '✋待改')
-        self.assertContains(r, '未交')
+        self.assertContains(r, 'S1 A01：5 分，待人工評分')
+        self.assertContains(r, 'class="cell-missing"')
+        self.assertContains(r, '<th scope="row" class="col-student">S1</th>', html=False)
 
     def test_csv_download(self):
         Submission.objects.create(question=self.q, student_id='S1', filename='', code='', tests_passed=True)
