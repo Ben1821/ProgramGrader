@@ -1,5 +1,5 @@
 {% extends 'grader/base.html' %}
-{% load grader_extras %}
+{% load grader_extras static %}
 {% block title %}{{ question.code }} 批改{% endblock %}
 {% block back %}<a class="back" href="{% url 'grader:exam_overview' exam.id %}">← 返回總覽</a>{% endblock %}
 {% block content %}
@@ -8,15 +8,75 @@
   <span>進度 {{ graded_count }} / {{ submitted_count }}</span>
 </div>
 <div class="grade-layout">
-  <aside class="roster">
-    {% for sid, status in roster %}
-      {% if status == 'missing' %}
-        <div class="roster-item missing">{{ sid }} 未交</div>
-      {% else %}
-        <a class="roster-item {{ status }}{% if sid == current %} current{% endif %}"
-           href="?student={{ sid|urlencode }}">{% if status == 'done' %}✔{% else %}✋{% endif %} {{ sid }}</a>
+  <aside class="side" aria-label="批改側邊欄">
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-students" aria-controls="panel-students" aria-selected="{% if tab == 'students' %}true{% else %}false{% endif %}">學生</button>
+      {% if sub %}
+        <button type="button" role="tab" id="tab-scores" aria-controls="panel-scores" aria-selected="{% if tab == 'scores' %}true{% else %}false{% endif %}">同題分數</button>
+        <button type="button" role="tab" id="tab-similar" aria-controls="panel-similar" aria-selected="{% if tab == 'similar' %}true{% else %}false{% endif %}">相似程式{% if similar.0.flagged %}<span class="flag-dot" title="有疑似抄襲"></span>{% endif %}</button>
       {% endif %}
-    {% endfor %}
+    </div>
+
+    <div class="tab-panel roster" role="tabpanel" id="panel-students" aria-labelledby="tab-students" {% if tab != 'students' and sub %}hidden{% endif %}>
+      {% for sid, status in roster %}
+        {% if status == 'missing' %}
+          <div class="roster-item missing">— {{ sid }} 未交</div>
+        {% else %}
+          <a class="roster-item {{ status }}{% if sid == current %} current{% endif %}" title="{{ status|status_label }}"
+             href="?student={{ sid|urlencode }}"><span class="mark mark-{{ status }}" aria-hidden="true"></span>{{ sid }}<span class="sr-only">，{{ status|status_label }}</span></a>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    {% if sub %}
+      <div class="tab-panel" role="tabpanel" id="panel-scores" aria-labelledby="tab-scores" {% if tab != 'scores' %}hidden{% endif %}>
+        {% if peers %}
+          <div class="sort-bar">排序：
+            <button type="button" data-sort="id" aria-pressed="true">學號</button>
+            <button type="button" data-sort="total" aria-pressed="false">總分</button>
+          </div>
+          <table class="peer-table" data-sortable>
+            <thead><tr><th scope="col">學號</th><th scope="col" class="num">總分</th>
+              {% for c in criteria %}<th scope="col" class="num" title="{{ c.name }}">{{ c.name|slice:':2' }}</th>{% endfor %}</tr></thead>
+            <tbody>
+              {% for p in peers %}
+                <tr data-id="{{ p.student_id }}" data-total="{{ p.total }}"{% if p.current %} class="current"{% endif %}>
+                  <th scope="row"><a href="?student={{ p.student_id|urlencode }}&amp;tab=scores">{{ p.student_id }}</a></th>
+                  <td class="num">{{ p.total|score }}</td>
+                  {% for v in p.breakdown %}<td class="num">{% if v is None %}—{% else %}{{ v|score }}{% endif %}</td>{% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <p class="hint">只列已完成評分的作答。點學號可回頭重改。</p>
+        {% else %}
+          <p class="muted">這題還沒有已完成評分的作答。</p>
+        {% endif %}
+      </div>
+
+      <div class="tab-panel" role="tabpanel" id="panel-similar" aria-labelledby="tab-similar" {% if tab != 'similar' %}hidden{% endif %}>
+        {% if similar %}
+          <ul class="similar-list">
+            {% for item in similar %}
+              <li class="{% if item.flagged %}flagged{% endif %}">
+                <a href="?student={{ item.sub.student_id|urlencode }}&amp;tab=similar">{{ item.sub.student_id }}</a>
+                {% if item.comparable %}
+                  <span class="pct">{{ item.percent }}%</span>
+                {% else %}
+                  <span class="muted" title="程式太短，無法判斷">—</span>
+                {% endif %}
+                {% if item.flagged %}<span class="flag">疑似抄襲</span>{% endif %}
+                <span class="muted">{{ item.score|score }} 分・{{ item.status|status_label }}</span>
+                <a class="compare-link" href="{% url 'grader:compare' question.id %}?a={{ sub.student_id|urlencode }}&amp;b={{ item.sub.student_id|urlencode }}">並排比較</a>
+              </li>
+            {% endfor %}
+          </ul>
+          <p class="hint">比對前忽略註解、空白與變數名稱。相似度達 {{ exam.similarity_threshold }}% 標示疑似抄襲（可在考卷設定調整），請自行判斷。</p>
+        {% else %}
+          <p class="muted">這題沒有其他作答可以比較。</p>
+        {% endif %}
+      </div>
+    {% endif %}
   </aside>
 
   {% if not sub %}
@@ -67,4 +127,5 @@
     </aside>
   {% endif %}
 </div>
+<script src="{% static 'grader/grade.js' %}"></script>
 {% endblock %}

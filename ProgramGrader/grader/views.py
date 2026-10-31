@@ -1,18 +1,23 @@
+import difflib
 from urllib.parse import quote
 
 from django.contrib import messages
 from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.html import escape
+from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from .export import build_csv
-from .forms import CaseFormSet, CriterionFormSet, ExamForm, FolderForm, GradeForm, QuestionFormSet
+from .forms import (CaseFormSet, CriterionFormSet, ExamForm, ExamSettingsForm, FolderForm, GradeForm,
+                    QuestionFormSet)
 from .importer import import_files, pair_case_files
 from .models import Criterion, CriterionScore, Exam, Folder, Question, Submission, TestCase
 from .runner import run_question
-from .scoring import cell_status, fmt, invalidate_over_cap, student_rows, test_score
+from .scoring import cell_status, fmt, invalidate_over_cap, progress, question_score, student_rows, test_score
+from .similarity import comparable, similar_submissions, similarity, tokens
 
 
 def home(request, folder_form=None, exam_form=None):
@@ -47,7 +52,7 @@ def exam_create(request):
 def exam_settings(request, pk):
     exam = get_object_or_404(Exam, pk=pk)
     data = request.POST if request.method == 'POST' else None
-    form = ExamForm(data, instance=exam)
+    form = ExamSettingsForm(data, instance=exam)
     questions = QuestionFormSet(data, instance=exam, prefix='q')
     criteria = CriterionFormSet(data, instance=exam, prefix='c')
     if data is not None and form.is_valid() and questions.is_valid() and criteria.is_valid():
@@ -168,8 +173,10 @@ def exam_upload(request, pk):
 
 def exam_overview(request, pk):
     exam = get_object_or_404(Exam, pk=pk)
-    return render(request, 'grader/overview.html',
-                  {'exam': exam, 'questions': exam.questions.all(), 'rows': student_rows(exam)})
+    questions = list(exam.questions.all())
+    rows = student_rows(exam)
+    return render(request, 'grader/overview.html', {'exam': exam, 'questions': questions, 'rows': rows,
+                                                    'progress': progress(rows, questions)})
 
 
 def exam_csv(request, pk):
@@ -186,11 +193,12 @@ def grade(request, pk):
     students = sorted(set(Submission.objects.filter(question__exam=exam)
                           .values_list('student_id', flat=True)))
     roster = [(sid, cell_status(subs.get(sid))) for sid in students]
-    pending = [sid for sid, status in roster if status == 'pending']
+    pending = [sid for sid, status in roster if status in ('pending', 'review')]
 
     current = request.GET.get('student') or (pending[0] if pending else None)
     sub = subs.get(current)
-    ctx = {'exam': exam, 'question': question, 'roster': roster, 'current': current, 'sub': sub,
+    tab = request.GET.get('tab') if request.GET.get('tab') in ('students', 'scores', 'similar') else 'students'
+    ctx = {'exam': exam, 'question': question, 'roster': roster, 'current': current, 'sub': sub, 'tab': tab,
            'graded_count': sum(status == 'done' for _, status in roster),
            'submitted_count': len(subs)}
     if sub is None:
@@ -215,8 +223,40 @@ def grade(request, pk):
 
     ctx.update(form=form, lines=sub.code.splitlines(),
                test_points=test_score(question.points, sub.tests_passed),
-               needs_review=not sub.graded and bool(initial.keys() - {'comment'}))
+               needs_review=not sub.graded and bool(initial.keys() - {'comment'}),
+               criteria=criteria, peers=_peer_scores(subs, criteria, current),
+               similar=[{'sub': other, 'percent': pct, 'comparable': ok,
+                         'flagged': ok and pct >= exam.similarity_threshold,
+                         'score': question_score(other), 'status': cell_status(other)}
+                        for other, pct, ok in similar_submissions(sub)])
     return render(request, 'grader/grade.html', ctx)
+
+
+def _peer_scores(subs, criteria, current):
+    """同題已改作答的總分與各項細分，給批改頁「同題分數」比對用。"""
+    peers = []
+    for sid, s in sorted(subs.items()):
+        if not s.graded:
+            continue
+        by_criterion = {c.criterion_id: c.score for c in s.scores.all()}
+        peers.append({'student_id': sid, 'total': question_score(s), 'current': sid == current,
+                      'breakdown': [by_criterion.get(c.id) for c in criteria]})
+    return peers
+
+
+def compare(request, pk):
+    question = get_object_or_404(Question.objects.select_related('exam'), pk=pk)
+    a = get_object_or_404(question.submissions, student_id=request.GET.get('a'))
+    b = get_object_or_404(question.submissions, student_id=request.GET.get('b'))
+    table = difflib.HtmlDiff(wrapcolumn=70).make_table(
+        a.code.splitlines(), b.code.splitlines(), escape(a.student_id), escape(b.student_id))
+    ta, tb = tokens(a.code), tokens(b.code)
+    return render(request, 'grader/compare.html', {
+        'exam': question.exam, 'question': question, 'a': a, 'b': b,
+        'percent': similarity(ta, tb), 'comparable': comparable(ta, tb),
+        'a_score': question_score(a), 'b_score': question_score(b),
+        'table': mark_safe(table),  # HtmlDiff 會 escape 程式碼；表頭的學號已在上面 escape
+    })
 
 
 def _next_pending(pending, current):

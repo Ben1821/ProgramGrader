@@ -22,6 +22,14 @@ class ExamForm(forms.ModelForm):
                    'name': forms.TextInput(attrs={'placeholder': '例如 A 或 期中考'})}
 
 
+class ExamSettingsForm(ExamForm):
+    class Meta(ExamForm.Meta):
+        fields = ['folder', 'name', 'similarity_threshold']
+        help_texts = {'similarity_threshold': '批改頁「相似程式」中，相似度達到這個百分比就標示疑似抄襲'}
+        widgets = {**ExamForm.Meta.widgets,
+                   'similarity_threshold': forms.NumberInput(attrs={'min': 1, 'max': 100})}
+
+
 class QuestionForm(forms.ModelForm):
     # 題號需和檔名的題號一致，importer 只接受英數字
     code = forms.CharField(label='題號', max_length=50,

@@ -1,3 +1,4 @@
+import re
 from decimal import Decimal
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -9,7 +10,7 @@ from grader.models import CriterionScore, Exam, Folder, Question, Submission, Te
 
 def settings_post(exam, questions=(), weights=None):
     """組出設定頁 formset 的 POST 資料；questions 為 (code, points) 新增列。"""
-    data = {'name': exam.name, 'folder': exam.folder_id}
+    data = {'name': exam.name, 'folder': exam.folder_id, 'similarity_threshold': exam.similarity_threshold}
     existing_q = list(exam.questions.all())
     rows = [(q.id, q.code, q.points) for q in existing_q] + [('', c, p) for c, p in questions]
     data.update({'q-TOTAL_FORMS': len(rows), 'q-INITIAL_FORMS': len(existing_q),
@@ -205,6 +206,115 @@ class UploadAndOverviewTests(TestCase):
         self.assertEqual(r['Content-Type'], 'text/csv; charset=utf-8')
         self.assertTrue(r.content.startswith(b'\xef\xbb\xbf'))
         self.assertIn('S1,10,10', r.content.decode('utf-8-sig'))
+
+
+class ProgressOverviewTests(TestCase):
+    def setUp(self):
+        self.exam = Exam.create_with_defaults('A')
+        self.q = Question.objects.create(exam=self.exam, code='A01', points=20)
+        self.url = reverse('grader:exam_overview', args=[self.exam.id])
+
+    def test_export_warns_while_pending_or_review(self):
+        Submission.objects.create(question=self.q, student_id='S1', filename='', code='')
+        sub = Submission.objects.create(question=self.q, student_id='S2', filename='', code='')
+        CriterionScore.objects.create(submission=sub, criterion=self.exam.criteria.first(), score=1)
+        r = self.client.get(self.url)
+        self.assertContains(r, '尚有 <strong>1</strong> 份待改、<strong>1</strong> 份需複查', html=False)
+        self.assertContains(r, 'class="cell-review"')
+        self.assertContains(r, reverse('grader:exam_csv', args=[self.exam.id]))
+
+    def test_export_ok_when_complete_and_no_nav_export(self):
+        Submission.objects.create(question=self.q, student_id='S1', filename='', code='', graded=True)
+        r = self.client.get(self.url)
+        self.assertContains(r, '全部改完，可以匯出')
+        self.assertContains(r, '已改 1 / 1 份（100%）')
+        self.assertNotContains(self.client.get(reverse('grader:exam_settings', args=[self.exam.id])),
+                               reverse('grader:exam_csv', args=[self.exam.id]))
+
+    def test_search_target_rows_have_ids(self):
+        Submission.objects.create(question=self.q, student_id='D1234567', filename='', code='')
+        r = self.client.get(self.url)
+        self.assertContains(r, 'id="student-D1234567"')
+        self.assertContains(r, '<option value="D1234567">', html=False)
+
+
+LONG_CODE = '''n = int(input())
+total = 0
+for i in range(1, n + 1):
+    if i % 2 == 0:
+        total += i * i
+    else:
+        total -= i
+print(total)
+'''
+
+
+class ReviewPanelTests(TestCase):
+    def setUp(self):
+        self.exam = Exam.create_with_defaults('A')
+        self.q = Question.objects.create(exam=self.exam, code='A01', points=20)
+        self.a = Submission.objects.create(question=self.q, student_id='S1', filename='', code=LONG_CODE)
+        self.b = Submission.objects.create(question=self.q, student_id='S2', filename='', graded=True,
+                                           code=re.sub(r'\bi\b', 'k', LONG_CODE.replace('total', 'acc')))
+        Submission.objects.create(question=self.q, student_id='S3', filename='', code='print(1)')
+        for c, v in zip(self.exam.criteria.all(), ['3', '2', '2.5', '1.5']):
+            CriterionScore.objects.create(submission=self.b, criterion=c, score=v)
+        self.url = reverse('grader:grade', args=[self.q.id])
+
+    def test_similar_panel_flags_renamed_copy(self):
+        r = self.client.get(self.url + '?student=S1&tab=similar')
+        similar = r.context['similar']
+        self.assertEqual(similar[0]['sub'].student_id, 'S2')
+        self.assertTrue(similar[0]['flagged'])
+        self.assertFalse(similar[-1]['comparable'])  # S3 太短
+        self.assertContains(r, '疑似抄襲')
+        self.assertContains(r, reverse('grader:compare', args=[self.q.id]) + '?a=S1&amp;b=S2', html=False)
+
+    def test_threshold_from_exam_settings(self):
+        self.b.code = LONG_CODE.replace('i * i', 'i * i * 2')
+        self.b.save()
+        r = self.client.get(self.url + '?student=S1')
+        pct = r.context['similar'][0]['percent']
+        self.assertLess(pct, 100)
+        self.assertTrue(r.context['similar'][0]['flagged'])
+        Exam.objects.filter(pk=self.exam.pk).update(similarity_threshold=pct + 1)
+        self.assertFalse(self.client.get(self.url + '?student=S1').context['similar'][0]['flagged'])
+
+    def test_peer_scores_list_graded_with_breakdown(self):
+        r = self.client.get(self.url + '?student=S1&tab=scores')
+        peers = r.context['peers']
+        self.assertEqual([p['student_id'] for p in peers], ['S2'])
+        self.assertEqual(peers[0]['total'], Decimal('14'))  # 測資未過 5 + 人工 9
+
+    def test_compare_page(self):
+        r = self.client.get(reverse('grader:compare', args=[self.q.id]) + '?a=S1&b=S2')
+        self.assertContains(r, 'S1 ↔ S2')
+        self.assertContains(r, '相似度 <strong>100%</strong>', html=False)
+        self.assertContains(r, 'class="diff"')
+
+    def test_compare_short_code_not_flagged(self):
+        r = self.client.get(reverse('grader:compare', args=[self.q.id]) + '?a=S3&b=S3')
+        self.assertContains(r, '程式太短，不判定相似度')
+        self.assertNotContains(r, 'class="flag"')
+
+    def test_compare_other_question_is_404(self):
+        other_q = Question.objects.create(exam=self.exam, code='A02', points=10)
+        Submission.objects.create(question=other_q, student_id='X9', filename='', code='')
+        url = reverse('grader:compare', args=[self.q.id])
+        self.assertEqual(self.client.get(url + '?a=S1&b=X9').status_code, 404)
+        self.assertEqual(self.client.get(url + '?a=S1').status_code, 404)
+
+    def test_compare_escapes_code(self):
+        self.a.code = 'print("<script>alert(1)</script>")'
+        self.a.save()
+        r = self.client.get(reverse('grader:compare', args=[self.q.id]) + '?a=S1&b=S2')
+        self.assertNotContains(r, '<script>alert(1)</script>', html=False)
+
+    def test_review_counts_as_pending_for_next(self):
+        Submission.objects.filter(student_id='S3').update(graded=True)
+        CriterionScore.objects.create(submission=self.a, criterion=self.exam.criteria.first(), score=1)
+        # S1 需複查（有分數未 graded），預設應被帶到 S1
+        self.assertEqual(self.client.get(self.url).context['current'], 'S1')
 
 
 class GradeViewTests(TestCase):

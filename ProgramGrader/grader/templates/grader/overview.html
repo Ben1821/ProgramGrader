@@ -1,5 +1,5 @@
 {% extends 'grader/base.html' %}
-{% load grader_extras %}
+{% load grader_extras static %}
 {% block title %}{{ exam.name }} 總覽{% endblock %}
 {% block content %}
 <h1>{{ exam.name }} 成績總覽</h1>
@@ -8,46 +8,107 @@
 {% elif not rows %}
   <p class="muted">還沒有作答，先去<a href="{% url 'grader:exam_upload' exam.id %}">上傳</a>。</p>
 {% else %}
-  <div class="overview-legend">
-    <span class="hint">點題號從第一位待改的學生開始批改；點格子直接改那位學生。</span>
-    <span class="legend">
-      <span><span class="mark mark-done" aria-hidden="true"></span>已完成</span>
-      <span><span class="mark mark-pending" aria-hidden="true"></span>待人工評分（目前只計測資分）</span>
-      <span>— 未交</span>
-      <span>* 尚未改完</span>
-    </span>
-  </div>
-  <div class="table-scroll" tabindex="0" role="region" aria-label="{{ exam.name }} 成績表，可捲動">
-    <table class="grid overview">
-      <thead>
-        <tr>
-          <th scope="col" class="col-student">學號</th>
-          {% for q in questions %}
-            <th scope="col" class="col-q"><a href="{% url 'grader:grade' q.id %}">{{ q.code }}</a><span class="points">{{ q.points|score }} 分</span></th>
-          {% endfor %}
-          <th scope="col" class="col-total">總分</th>
-        </tr>
-      </thead>
+  {% with t=progress.total %}
+  <section class="progress-panel" aria-labelledby="progress-title">
+    <div class="progress-summary">
+      <h2 id="progress-title">批改進度：已改 {{ t.done }} / {{ t.submitted }} 份{% if t.percent is not None %}（{{ t.percent }}%）{% endif %}</h2>
+      <span class="bar bar-wide" aria-hidden="true"><span style="width: {{ t.percent|default:0 }}%"></span></span>
+      <dl class="progress-counts">
+        <div><dt><span class="mark mark-done" aria-hidden="true"></span>已改</dt><dd>{{ t.done }}</dd></div>
+        <div><dt><span class="mark mark-pending" aria-hidden="true"></span>待改</dt><dd>{{ t.pending }}</dd></div>
+        <div><dt><span class="mark mark-review" aria-hidden="true"></span>需複查</dt><dd>{{ t.review }}</dd></div>
+        <div><dt>— 未交</dt><dd>{{ t.missing }}</dd></div>
+      </dl>
+      <div class="export {% if t.pending or t.review %}export-warn{% else %}export-ok{% endif %}" id="export">
+        {% if t.pending or t.review %}
+          <p>尚有 <strong>{{ t.pending }}</strong> 份待改{% if t.review %}、<strong>{{ t.review }}</strong> 份需複查{% endif %}，現在匯出的這些題目只含測資分。</p>
+        {% else %}
+          <p>全部改完，可以匯出。</p>
+        {% endif %}
+        <a class="button {% if not t.pending and not t.review %}primary{% endif %}" href="{% url 'grader:exam_csv' exam.id %}">匯出 CSV</a>
+      </div>
+    </div>
+
+    <table class="progress-table">
+      <caption class="sr-only">各題批改進度</caption>
+      <thead><tr><th scope="col">題號</th><th scope="col">進度</th><th scope="col">待改</th><th scope="col">需複查</th><th scope="col"><span class="sr-only">動作</span></th></tr></thead>
       <tbody>
-        {% for row in rows %}
+        {% for p in progress.questions %}
           <tr>
-            <th scope="row" class="col-student">{{ row.student_id }}</th>
-            {% for q, sub, s, status in row.cells %}
-              {% if status == 'missing' %}
-                <td class="cell-missing" title="{{ row.student_id }} {{ q.code }} 未交"><span aria-hidden="true">—</span><span class="sr-only">未交</span></td>
-              {% else %}
-                <td class="cell-{{ status }}">
-                  <a href="{% url 'grader:grade' q.id %}?student={{ row.student_id|urlencode }}"
-                     title="{{ row.student_id }} {{ q.code }}：{{ s|score }} 分，{% if status == 'done' %}已完成{% else %}待人工評分{% endif %}"
-                     aria-label="{{ row.student_id }} {{ q.code }}：{{ s|score }} 分，{% if status == 'done' %}已完成{% else %}待人工評分{% endif %}">{{ s|score }}<span class="mark mark-{{ status }}" aria-hidden="true"></span></a>
-                </td>
+            <th scope="row">{{ p.question.code }} <span class="muted">{{ p.question.points|score }} 分</span></th>
+            <td>
+              {% if p.submitted %}
+                <span class="bar" aria-hidden="true"><span style="width: {{ p.percent }}%"></span></span>
+                <span class="bar-label">{{ p.done }} / {{ p.submitted }}</span>
+              {% else %}<span class="muted">沒有人交</span>{% endif %}
+            </td>
+            <td class="num">{{ p.pending|default:'' }}</td>
+            <td class="num">{% if p.review %}<span class="review-count">{{ p.review }}</span>{% endif %}</td>
+            <td>
+              {% if p.pending or p.review %}
+                <a href="{% url 'grader:grade' p.question.id %}">繼續批改</a>
+              {% elif p.submitted %}
+                <span class="ok">已完成</span>
               {% endif %}
-            {% endfor %}
-            <td class="col-total"><strong>{{ row.total|score }}</strong>{% if not row.complete %}<span title="尚未改完">*</span>{% endif %}</td>
+            </td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
-  </div>
+  </section>
+  {% endwith %}
+
+  <section aria-labelledby="table-title">
+    <div class="overview-legend">
+      <h2 id="table-title">成績表</h2>
+      <form class="student-search" role="search" data-student-search>
+        <label for="student-search">找學號</label>
+        <input id="student-search" type="search" list="student-ids" autocomplete="off" placeholder="例如 D1234567">
+        <datalist id="student-ids">{% for row in rows %}<option value="{{ row.student_id }}">{% endfor %}</datalist>
+        <button type="submit">前往</button>
+        <span class="search-status" role="status" aria-live="polite"></span>
+      </form>
+      <span class="legend">
+        <span><span class="mark mark-done" aria-hidden="true"></span>已完成</span>
+        <span><span class="mark mark-pending" aria-hidden="true"></span>待改（目前只計測資分）</span>
+        <span><span class="mark mark-review" aria-hidden="true"></span>需複查</span>
+        <span>— 未交</span>
+        <span>* 尚未改完</span>
+      </span>
+    </div>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="{{ exam.name }} 成績表，可捲動">
+      <table class="grid overview">
+        <thead>
+          <tr>
+            <th scope="col" class="col-student">學號</th>
+            {% for q in questions %}
+              <th scope="col" class="col-q"><a href="{% url 'grader:grade' q.id %}">{{ q.code }}</a><span class="points">{{ q.points|score }} 分</span></th>
+            {% endfor %}
+            <th scope="col" class="col-total">總分</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr id="student-{{ row.student_id }}">
+              <th scope="row" class="col-student">{{ row.student_id }}</th>
+              {% for q, sub, s, status in row.cells %}
+                {% if status == 'missing' %}
+                  <td class="cell-missing" title="{{ row.student_id }} {{ q.code }} 未交"><span aria-hidden="true">—</span><span class="sr-only">未交</span></td>
+                {% else %}
+                  <td class="cell-{{ status }}">
+                    <a href="{% url 'grader:grade' q.id %}?student={{ row.student_id|urlencode }}"
+                       title="{{ row.student_id }} {{ q.code }}：{{ s|score }} 分，{{ status|status_label }}"
+                       aria-label="{{ row.student_id }} {{ q.code }}：{{ s|score }} 分，{{ status|status_label }}">{{ s|score }}<span class="mark mark-{{ status }}" aria-hidden="true"></span></a>
+                  </td>
+                {% endif %}
+              {% endfor %}
+              <td class="col-total"><strong>{{ row.total|score }}</strong>{% if not row.complete %}<span title="尚未改完">*</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <script src="{% static 'grader/overview.js' %}"></script>
 {% endif %}
 {% endblock %}

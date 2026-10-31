@@ -1,0 +1,22 @@
+{% extends 'grader/base.html' %}
+{% load grader_extras %}
+{% block title %}{{ question.code }} 並排比較{% endblock %}
+{% block back %}<a class="back" href="{% url 'grader:grade' question.id %}?student={{ a.student_id|urlencode }}&amp;tab=similar">← 返回批改</a>{% endblock %}
+{% block content %}
+<h1>{{ question.code }} 並排比較：{{ a.student_id }} ↔ {{ b.student_id }}</h1>
+<p>
+  {% if comparable %}
+    相似度 <strong>{{ percent }}%</strong>
+    {% if percent >= exam.similarity_threshold %}<span class="flag">疑似抄襲</span>{% endif %}
+  {% else %}
+    <span class="muted">程式太短，不判定相似度</span>
+  {% endif %}
+  <span class="muted">（忽略註解、空白與變數名稱；門檻 {{ exam.similarity_threshold }}%）</span>
+</p>
+<div class="compare-heads">
+  <div><a href="{% url 'grader:grade' question.id %}?student={{ a.student_id|urlencode }}">{{ a.student_id }}</a> <span class="muted">{{ a_score|score }} 分</span></div>
+  <div><a href="{% url 'grader:grade' question.id %}?student={{ b.student_id|urlencode }}">{{ b.student_id }}</a> <span class="muted">{{ b_score|score }} 分</span></div>
+</div>
+<div class="diff-wrap">{{ table }}</div>
+<p class="hint">標色的行是兩份不同的地方：綠色為只出現在右邊，紅色為只出現在左邊，黃色為改過的部分。逐字比對原始程式碼，所以變數名稱不同也會標色。</p>
+{% endblock %}

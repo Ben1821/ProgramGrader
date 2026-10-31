@@ -8,6 +8,10 @@
   <section>
     {{ form.folder }}
     {{ form.name.label_tag }} {{ form.name }} {{ form.name.errors }} {{ form.non_field_errors }}
+    <div class="field-inline">
+      {{ form.similarity_threshold.label_tag }} {{ form.similarity_threshold }} {{ form.similarity_threshold.errors }}
+      <span class="hint">{{ form.similarity_threshold.help_text }}</span>
+    </div>
   </section>
 
   <section>

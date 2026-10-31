@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 DEFAULT_CRITERIA = [
@@ -24,6 +25,8 @@ DEFAULT_FOLDER = '未分類'
 class Exam(models.Model):
     folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='exams', verbose_name='資料夾')
     name = models.CharField('考卷名稱', max_length=100)
+    similarity_threshold = models.PositiveSmallIntegerField(
+        '疑似抄襲門檻 (%)', default=80, validators=[MinValueValidator(1), MaxValueValidator(100)])
 
     class Meta:
         ordering = ['name']

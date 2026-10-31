@@ -19,5 +19,6 @@ urlpatterns = [
     path('question/<int:pk>/rerun/', views.question_rerun, name='question_rerun'),
     path('question/<int:pk>/delete/', views.question_delete, name='question_delete'),
     path('question/<int:pk>/grade/', views.grade, name='grade'),
+    path('question/<int:pk>/compare/', views.compare, name='compare'),
     path('criterion/<int:pk>/delete/', views.criterion_delete, name='criterion_delete'),
 ]

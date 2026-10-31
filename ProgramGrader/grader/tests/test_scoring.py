@@ -3,7 +3,7 @@ from decimal import Decimal as D
 from django.test import TestCase
 
 from grader.models import CriterionScore, Exam, Question, Submission
-from grader.scoring import (cell_status, criterion_cap, fmt, invalidate_over_cap,
+from grader.scoring import (cell_status, criterion_cap, fmt, invalidate_over_cap, progress,
                             question_score, student_rows, test_score)
 
 
@@ -49,6 +49,20 @@ class ScoringTests(TestCase):
         self.assertEqual(cell_status(None), 'missing')
         self.assertEqual(cell_status(make_sub(self.q1, 'S1', graded=True)), 'done')
         self.assertEqual(cell_status(make_sub(self.q1, 'S2')), 'pending')
+
+    def test_cell_status_review_when_reopened_with_scores(self):
+        self.assertEqual(cell_status(make_sub(self.q1, 'S3', graded=False, scores=[1])), 'review')
+
+    def test_progress_counts(self):
+        make_sub(self.q1, 'S1', graded=True)
+        make_sub(self.q1, 'S2', graded=False, scores=[1])
+        make_sub(self.q2, 'S2')
+        p = progress(student_rows(self.exam), [self.q1, self.q2])
+        q1, q2 = p['questions']
+        self.assertEqual((q1['done'], q1['review'], q1['pending'], q1['missing'], q1['percent']), (1, 1, 0, 0, 50))
+        self.assertEqual((q2['pending'], q2['missing']), (1, 1))
+        self.assertEqual((p['total']['done'], p['total']['submitted'], p['total']['percent']), (1, 3, 33))
+        self.assertFalse(student_rows(self.exam)[1]['complete'])
 
     def test_fmt(self):
         self.assertEqual(fmt(D('12.50')), '12.5')

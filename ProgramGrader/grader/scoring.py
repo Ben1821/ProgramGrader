@@ -22,9 +22,26 @@ def question_score(sub):
 
 
 def cell_status(sub):
+    """missing 未交、done 已完成、review 評過但被退回需複查、pending 從未評過。"""
     if sub is None:
         return 'missing'
-    return 'done' if sub.graded else 'pending'
+    if sub.graded:
+        return 'done'
+    return 'review' if sub.scores.all() else 'pending'
+
+
+def progress(rows, questions):
+    """總覽頁進度區：整體與每題的 done / pending / review / missing 份數。"""
+    keys = ('done', 'pending', 'review', 'missing')
+    per_q = [dict.fromkeys(keys, 0) | {'question': q} for q in questions]
+    for row in rows:
+        for counts, (_, _, _, status) in zip(per_q, row['cells']):
+            counts[status] += 1
+    total = {k: sum(c[k] for c in per_q) for k in keys}
+    for c in per_q + [total]:
+        c['submitted'] = c['done'] + c['pending'] + c['review']
+        c['percent'] = round(c['done'] * 100 / c['submitted']) if c['submitted'] else None
+    return {'questions': per_q, 'total': total}
 
 
 def student_rows(exam):
@@ -43,7 +60,7 @@ def student_rows(exam):
             'student_id': student,
             'cells': cells,
             'total': sum((c[2] for c in cells), Decimal('0')),
-            'complete': all(c[3] != 'pending' for c in cells),
+            'complete': all(c[3] in ('done', 'missing') for c in cells),
         })
     return rows
 
