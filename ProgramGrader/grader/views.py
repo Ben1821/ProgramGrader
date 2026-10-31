@@ -30,14 +30,19 @@ def exam_settings(request, pk):
     questions = QuestionFormSet(data, instance=exam, prefix='q')
     criteria = CriterionFormSet(data, instance=exam, prefix='c')
     if data is not None and form.is_valid() and questions.is_valid() and criteria.is_valid():
+        retime = [f.instance for f in questions.initial_forms if 'time_limit' in f.changed_data]
         with transaction.atomic():
             form.save()
             questions.save()
             criteria.save()
             invalidated = invalidate_over_cap(exam)
-        messages.success(request, '已儲存設定')
+            if criteria.new_objects:  # 已改完的作答缺新項目的分數，全部退回待改
+                invalidated += Submission.objects.filter(question__exam=exam, graded=True).update(graded=False)
+        for q in retime:
+            run_question(q)
+        messages.success(request, '已儲存設定' + (f'，並以新的時間限制重跑 {len(retime)} 題測資' if retime else ''))
         if invalidated:
-            messages.warning(request, f'{invalidated} 份已評分的作答因上限變更需複查')
+            messages.warning(request, f'{invalidated} 份已評分的作答因評分設定變更需複查')
         return redirect('grader:exam_settings', exam.id)
     return render(request, 'grader/exam_settings.html',
                   {'exam': exam, 'form': form, 'questions': questions, 'criteria': criteria})
@@ -107,7 +112,7 @@ def exam_overview(request, pk):
 def exam_csv(request, pk):
     exam = get_object_or_404(Exam, pk=pk)
     response = HttpResponse(build_csv(exam), content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{quote(exam.name + '_scores.csv')}"
+    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{quote(exam.name + '_scores.csv', safe='')}"
     return response
 
 

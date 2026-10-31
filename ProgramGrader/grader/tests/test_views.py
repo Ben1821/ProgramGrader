@@ -58,9 +58,30 @@ class SettingsViewTests(TestCase):
         data = settings_post(self.exam)
         data['q-0-points'] = '10'
         r = self.client.post(reverse('grader:exam_settings', args=[self.exam.id]), data, follow=True)
-        self.assertContains(r, '1 份已評分的作答因上限變更需複查')
+        self.assertContains(r, '1 份已評分的作答因評分設定變更需複查')
         sub.refresh_from_db()
         self.assertFalse(sub.graded)
+
+    def test_adding_criterion_reopens_graded(self):
+        q = Question.objects.create(exam=self.exam, code='A01', points=20)
+        sub = Submission.objects.create(question=q, student_id='S1', filename='', code='', graded=True)
+        data = settings_post(self.exam, weights=[30, 30, 20, 10])
+        data.update({'c-TOTAL_FORMS': 5, 'c-4-name': '程式風格', 'c-4-weight': 10, 'c-4-order': 4})
+        self.client.post(reverse('grader:exam_settings', args=[self.exam.id]), data)
+        self.assertEqual(self.exam.criteria.count(), 5)
+        sub.refresh_from_db()
+        self.assertFalse(sub.graded)
+
+    def test_time_limit_change_reruns_tests(self):
+        q = Question.objects.create(exam=self.exam, code='A01', points=20, time_limit=1)
+        Case.objects.create(question=q, expected_output='ok\n')
+        sub = Submission.objects.create(question=q, student_id='S1', filename='',
+                                        code='import time\ntime.sleep(1.5)\nprint("ok")')
+        data = settings_post(self.exam)
+        data['q-0-time_limit'] = 5
+        self.client.post(reverse('grader:exam_settings', args=[self.exam.id]), data)
+        sub.refresh_from_db()
+        self.assertTrue(sub.tests_passed)
 
     def test_save_cases_runs_tests(self):
         q = Question.objects.create(exam=self.exam, code='A01', points=20)
