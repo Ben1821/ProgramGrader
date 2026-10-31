@@ -8,15 +8,34 @@ DEFAULT_CRITERIA = [
 ]
 
 
+class Folder(models.Model):
+    name = models.CharField('資料夾名稱', max_length=100, unique=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+DEFAULT_FOLDER = '未分類'
+
+
 class Exam(models.Model):
-    name = models.CharField('考卷名稱', max_length=100, unique=True)
+    folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='exams', verbose_name='資料夾')
+    name = models.CharField('考卷名稱', max_length=100)
+
+    class Meta:
+        ordering = ['name']
+        unique_together = [('folder', 'name')]
 
     def __str__(self):
         return self.name
 
     @classmethod
-    def create_with_defaults(cls, name):
-        exam = cls.objects.create(name=name)
+    def create_with_defaults(cls, name, folder=None):
+        folder = folder or Folder.objects.get_or_create(name=DEFAULT_FOLDER)[0]
+        exam = cls.objects.create(folder=folder, name=name)
         Criterion.objects.bulk_create(
             Criterion(exam=exam, name=n, weight=w, description=d, order=i)
             for i, (n, w, d) in enumerate(DEFAULT_CRITERIA)

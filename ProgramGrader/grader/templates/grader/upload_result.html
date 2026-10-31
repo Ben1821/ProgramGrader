@@ -1,4 +1,5 @@
 {% extends 'grader/base.html' %}
+{% block back %}<a class="back" href="{% url 'grader:exam_upload' exam.id %}">← 返回上傳</a>{% endblock %}
 {% block content %}
 <h1>上傳結果</h1>
 <ul>

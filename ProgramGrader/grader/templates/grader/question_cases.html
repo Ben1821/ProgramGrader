@@ -1,28 +1,36 @@
 {% extends 'grader/base.html' %}
+{% load static %}
 {% block title %}{{ question.code }} 測資{% endblock %}
+{% block back %}<a class="back" href="{% url 'grader:exam_settings' exam.id %}">← 返回考卷設定</a>{% endblock %}
 {% block content %}
 <h1>{{ question.code }} 測資</h1>
 <p class="hint">每組測資會把「輸入」餵給學生程式，再和「預期輸出」比對。input() 的提示文字不算輸出，行尾空白與結尾空行會被忽略。儲存後會自動重跑這題所有作答。</p>
+
+<section class="upload-box">
+  <h2>上傳測資檔</h2>
+  <form method="post" action="{% url 'grader:question_cases_upload' question.id %}" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file" name="files" accept=".in,.out" multiple required>
+    <label><input type="checkbox" name="replace"> 先清除這題的舊測資</label>
+    <button type="submit" class="primary">上傳並重跑</button>
+  </form>
+  <p class="hint">可一次選多個檔案。同名的 <code>.in</code> 與 <code>.out</code> 配成一組（例如 <code>1.in</code> + <code>1.out</code>），依檔名排序加在現有測資後面。</p>
+</section>
+
+<h2>測資列表</h2>
 <form method="post">
   {% csrf_token %}
   {{ formset.management_form }}
   {{ formset.non_form_errors }}
-  {% for f in formset %}
-    <fieldset class="case">
-      <legend>第 {{ forloop.counter }} 組{% if not f.instance.pk %}（新增）{% endif %}</legend>
-      {{ f.id }}
-      <div class="case-cols">
-        <label>輸入{{ f.input_text }}</label>
-        <label>預期輸出{{ f.expected_output }}</label>
-      </div>
-      順序 {{ f.order }}
-      {% if f.instance.pk %}<label class="danger">{{ f.DELETE }} 刪除這組</label>{% endif %}
-    </fieldset>
-  {% endfor %}
+  <div id="t-rows">
+    {% for f in formset %}{% include 'grader/_case_row.html' with n=forloop.counter %}{% endfor %}
+  </div>
+  <template id="t-empty">{% include 'grader/_case_row.html' with f=formset.empty_form %}</template>
+  <button type="button" data-add-form="t">＋ 新增測資</button>
   <button type="submit" class="primary">儲存並重跑</button>
 </form>
 <form method="post" action="{% url 'grader:question_rerun' question.id %}" class="inline-form">
   {% csrf_token %}<button type="submit">只重跑測資</button>
 </form>
-<p><a href="{% url 'grader:exam_settings' exam.id %}">← 回考卷設定</a></p>
+<script src="{% static 'grader/formset.js' %}"></script>
 {% endblock %}

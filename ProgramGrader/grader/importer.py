@@ -23,6 +23,30 @@ def decode(data):
     return data.decode('utf-8', errors='replace')
 
 
+def _natural_key(text):
+    return [int(part) if part.isdecimal() else part for part in re.split(r'(\d+)', text)]
+
+
+def pair_case_files(files):
+    """把 1.in / 1.out 這類同名檔配成 (輸入, 預期輸出)，依檔名自然排序（2 在 10 前）。"""
+    groups, warnings = {}, []
+    for path, data in files:
+        stem, _, ext = PurePosixPath(path).name.rpartition('.')
+        if ext.lower() not in ('in', 'out') or not stem:
+            warnings.append(f'不是 .in / .out 檔：{path}')
+            continue
+        groups.setdefault(stem, {})[ext.lower()] = decode(data).replace('\r\n', '\n')
+    pairs = []
+    for stem in sorted(groups, key=_natural_key):
+        g = groups[stem]
+        if g.keys() == {'in', 'out'}:
+            pairs.append((g['in'], g['out']))
+        else:
+            missing = 'out' if 'in' in g else 'in'
+            warnings.append(f'{stem} 缺少 .{missing} 檔，未匯入')
+    return pairs, warnings
+
+
 @dataclass
 class ImportReport:
     created: int = 0

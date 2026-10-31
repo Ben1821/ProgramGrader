@@ -1,6 +1,7 @@
 {% extends 'grader/base.html' %}
 {% load grader_extras %}
 {% block title %}{{ question.code }} 批改{% endblock %}
+{% block back %}<a class="back" href="{% url 'grader:exam_overview' exam.id %}">← 返回總覽</a>{% endblock %}
 {% block content %}
 <div class="grade-head">
   <h1>{{ question.code }}（配分 {{ question.points|score }}）</h1>
@@ -25,7 +26,6 @@
       {% else %}
         <p>此題已全部改完 🎉</p>
       {% endif %}
-      <p><a href="{% url 'grader:exam_overview' exam.id %}">← 回總覽</a></p>
     </section>
   {% else %}
     <section class="grade-main">

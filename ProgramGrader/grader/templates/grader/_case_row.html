@@ -1,0 +1,10 @@
+<fieldset class="case">
+  <legend>{% if f.instance.pk %}第 {{ n }} 組{% else %}新增測資{% endif %}</legend>
+  {{ f.id }}
+  <div class="case-cols">
+    <label>輸入{{ f.input_text }}</label>
+    <label>預期輸出{{ f.expected_output }}</label>
+  </div>
+  順序 {{ f.order }}
+  {% if f.instance.pk %}<label class="danger">{{ f.DELETE }} 刪除這組</label>{% endif %}
+</fieldset>

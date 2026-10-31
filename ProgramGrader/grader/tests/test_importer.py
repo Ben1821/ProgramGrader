@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from grader.importer import import_files, parse_filename
+from grader.importer import import_files, pair_case_files, parse_filename
 from grader.models import CriterionScore, Exam, Question, Submission, TestCase as Case
 
 
@@ -10,6 +10,15 @@ class ParseFilenameTests(TestCase):
         self.assertEqual(parse_filename('d1234567_a01.py'), ('D1234567', 'A01'))
         self.assertIsNone(parse_filename('D1234567-A01.py'))
         self.assertIsNone(parse_filename('D1234567_A01.txt'))
+
+
+class PairCaseFilesTests(TestCase):
+    def test_natural_order_and_odd_names(self):
+        pairs, warnings = pair_case_files([
+            ('10.in', b'a'), ('10.out', b'b'), ('2.IN', b'c'), ('2.out', b'd'),
+            ('²1.in', b'e'), ('²1.out', b'f'), ('notes.txt', b'')])
+        self.assertEqual(pairs, [('c', 'd'), ('a', 'b'), ('e', 'f')])
+        self.assertEqual(len(warnings), 1)
 
 
 class ImportFilesTests(TestCase):

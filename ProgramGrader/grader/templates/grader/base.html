@@ -8,9 +8,9 @@
 </head>
 <body>
   <header class="topbar">
-    <a href="{% url 'grader:exam_list' %}" class="brand">ProgramGrader</a>
+    <a href="{% url 'grader:home' %}" class="brand">ProgramGrader</a>
     {% if exam %}
-      <span class="crumb">› {{ exam.name }}</span>
+      <span class="crumb">› <a href="{% url 'grader:home' %}?open={{ exam.folder_id }}">{{ exam.folder.name }}</a> › {{ exam.name }}</span>
       <nav>
         <a href="{% url 'grader:exam_overview' exam.id %}">總覽</a>
         <a href="{% url 'grader:exam_settings' exam.id %}">設定</a>
@@ -20,6 +20,7 @@
     {% endif %}
   </header>
   <main>
+    {% block back %}{% if exam %}<a class="back" href="{% url 'grader:home' %}?open={{ exam.folder_id }}">← 返回</a>{% endif %}{% endblock %}
     {% for message in messages %}
       <p class="msg msg-{{ message.tags }}">{{ message }}</p>
     {% endfor %}

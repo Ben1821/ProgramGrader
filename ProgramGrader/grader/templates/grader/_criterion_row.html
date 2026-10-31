@@ -1,0 +1,7 @@
+<tr>
+  <td>{{ f.id }}{{ f.name }}{{ f.name.errors }}</td>
+  <td>{{ f.weight }}{{ f.weight.errors }}</td>
+  <td>{{ f.description }}</td>
+  <td>{{ f.order }}</td>
+  <td>{% if f.instance.pk %}<a class="danger" href="{% url 'grader:criterion_delete' f.instance.pk %}">刪除</a>{% endif %}</td>
+</tr>

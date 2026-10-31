@@ -3,15 +3,23 @@ from decimal import Decimal
 from django import forms
 from django.core.validators import RegexValidator
 
-from .models import Criterion, Exam, Question, TestCase
+from .models import Criterion, Exam, Folder, Question, TestCase
 from .scoring import criterion_cap, fmt
+
+
+class FolderForm(forms.ModelForm):
+    class Meta:
+        model = Folder
+        fields = ['name']
+        widgets = {'name': forms.TextInput(attrs={'placeholder': '例如 113上 程式設計'})}
 
 
 class ExamForm(forms.ModelForm):
     class Meta:
         model = Exam
-        fields = ['name']
-        widgets = {'name': forms.TextInput(attrs={'placeholder': '例如 A 或 期中考'})}
+        fields = ['folder', 'name']  # folder 隱藏但要在表單內，同資料夾不可重名的檢查才會生效
+        widgets = {'folder': forms.HiddenInput(),
+                   'name': forms.TextInput(attrs={'placeholder': '例如 A 或 期中考'})}
 
 
 class QuestionForm(forms.ModelForm):
@@ -58,7 +66,7 @@ class CriterionFormSetBase(forms.BaseInlineFormSet):
 
 QuestionFormSet = forms.inlineformset_factory(Exam, Question, form=QuestionForm, extra=1, can_delete=False)
 CriterionFormSet = forms.inlineformset_factory(Exam, Criterion, form=CriterionForm, formset=CriterionFormSetBase,
-                                               extra=1, can_delete=False)
+                                               extra=0, can_delete=False)
 
 
 class CaseForm(forms.ModelForm):
@@ -84,7 +92,7 @@ class CaseForm(forms.ModelForm):
         return data
 
 
-CaseFormSet = forms.inlineformset_factory(Question, TestCase, form=CaseForm, extra=3, can_delete=True)
+CaseFormSet = forms.inlineformset_factory(Question, TestCase, form=CaseForm, extra=1, can_delete=True)
 
 
 class GradeForm(forms.Form):

@@ -8,19 +8,40 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from .export import build_csv
-from .forms import CaseFormSet, CriterionFormSet, ExamForm, GradeForm, QuestionFormSet
-from .importer import import_files
-from .models import Criterion, CriterionScore, Exam, Question, Submission
+from .forms import CaseFormSet, CriterionFormSet, ExamForm, FolderForm, GradeForm, QuestionFormSet
+from .importer import import_files, pair_case_files
+from .models import Criterion, CriterionScore, Exam, Folder, Question, Submission, TestCase
 from .runner import run_question
 from .scoring import cell_status, fmt, invalidate_over_cap, student_rows, test_score
 
 
-def exam_list(request):
-    form = ExamForm(request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        exam = Exam.create_with_defaults(form.cleaned_data['name'])
-        return redirect('grader:exam_settings', exam.id)
-    return render(request, 'grader/exam_list.html', {'exams': Exam.objects.order_by('-id'), 'form': form})
+def home(request, folder_form=None, exam_form=None):
+    # ?open=<資料夾 id> 讓指定資料夾展開，其餘摺疊
+    open_id = exam_form['folder'].value() if exam_form else request.GET.get('open')
+    return render(request, 'grader/home.html', {
+        'folders': Folder.objects.prefetch_related('exams'),
+        'folder_form': folder_form or FolderForm(),
+        'exam_form': exam_form,
+        'open_id': str(open_id or ''),
+    })
+
+
+@require_POST
+def folder_create(request):
+    form = FolderForm(request.POST)
+    if not form.is_valid():
+        return home(request, folder_form=form)
+    folder = form.save()
+    return redirect(f"{reverse('grader:home')}?open={folder.id}")
+
+
+@require_POST
+def exam_create(request):
+    form = ExamForm(request.POST)
+    if not form.is_valid():
+        return home(request, exam_form=form)
+    exam = Exam.create_with_defaults(form.cleaned_data['name'], form.cleaned_data['folder'])
+    return redirect('grader:exam_settings', exam.id)
 
 
 def exam_settings(request, pk):
@@ -58,6 +79,25 @@ def question_cases(request, pk):
         return redirect('grader:question_cases', question.id)
     return render(request, 'grader/question_cases.html',
                   {'exam': question.exam, 'question': question, 'formset': formset})
+
+
+@require_POST
+def question_cases_upload(request, pk):
+    question = get_object_or_404(Question, pk=pk)
+    pairs, warnings = pair_case_files([(f.name, f.read()) for f in request.FILES.getlist('files')])
+    with transaction.atomic():
+        if request.POST.get('replace') and pairs:
+            question.cases.all().delete()
+        start = max((c.order for c in question.cases.all()), default=-1) + 1
+        TestCase.objects.bulk_create(
+            TestCase(question=question, input_text=i, expected_output=o, order=start + n)
+            for n, (i, o) in enumerate(pairs))
+    for w in warnings:
+        messages.warning(request, w)
+    if pairs:
+        run_question(question)
+        messages.success(request, f'已匯入 {len(pairs)} 組測資並重跑 {question.submissions.count()} 份作答')
+    return redirect('grader:question_cases', question.id)
 
 
 @require_POST

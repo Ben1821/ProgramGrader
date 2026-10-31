@@ -4,12 +4,12 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
-from grader.models import CriterionScore, Exam, Question, Submission, TestCase as Case
+from grader.models import CriterionScore, Exam, Folder, Question, Submission, TestCase as Case
 
 
 def settings_post(exam, questions=(), weights=None):
     """組出設定頁 formset 的 POST 資料；questions 為 (code, points) 新增列。"""
-    data = {'name': exam.name}
+    data = {'name': exam.name, 'folder': exam.folder_id}
     existing_q = list(exam.questions.all())
     rows = [(q.id, q.code, q.points) for q in existing_q] + [('', c, p) for c, p in questions]
     data.update({'q-TOTAL_FORMS': len(rows), 'q-INITIAL_FORMS': len(existing_q),
@@ -31,11 +31,61 @@ class SettingsViewTests(TestCase):
     def setUp(self):
         self.exam = Exam.create_with_defaults('A')
 
-    def test_create_exam_redirects_to_settings(self):
-        r = self.client.post(reverse('grader:exam_list'), {'name': 'B'})
+    def test_create_exam_in_folder_redirects_to_settings(self):
+        folder = Folder.objects.create(name='113上')
+        r = self.client.post(reverse('grader:exam_create'), {'name': 'B', 'folder': folder.id})
         exam = Exam.objects.get(name='B')
         self.assertRedirects(r, reverse('grader:exam_settings', args=[exam.id]))
-        self.assertEqual(exam.criteria.count(), 4)
+        self.assertEqual((exam.folder, exam.criteria.count()), (folder, 4))
+
+    def test_exam_name_unique_per_folder(self):
+        r = self.client.post(reverse('grader:exam_create'), {'name': 'A', 'folder': self.exam.folder_id})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(Exam.objects.filter(name='A').count(), 1)
+        other = Folder.objects.create(name='其他')
+        self.client.post(reverse('grader:exam_create'), {'name': 'A', 'folder': other.id})
+        self.assertEqual(Exam.objects.filter(name='A').count(), 2)
+
+    def test_folder_create_and_home_collapsed(self):
+        r = self.client.post(reverse('grader:folder_create'), {'name': '113上'})
+        folder = Folder.objects.get(name='113上')
+        self.assertRedirects(r, reverse('grader:home') + f'?open={folder.id}')
+        html = self.client.get(reverse('grader:home')).content.decode()
+        self.assertIn('113上', html)
+        self.assertNotIn('<details class="folder" open', html)
+        html = self.client.get(reverse('grader:home') + f'?open={folder.id}').content.decode()
+        self.assertEqual(html.count('<details class="folder" open'), 1)
+
+    def test_back_links(self):
+        q = Question.objects.create(exam=self.exam, code='A01', points=20)
+        self.assertContains(self.client.get(reverse('grader:exam_settings', args=[self.exam.id])),
+                            f'href="/?open={self.exam.folder_id}">← 返回')
+        self.assertContains(self.client.get(reverse('grader:question_cases', args=[q.id])), '← 返回考卷設定')
+        self.assertContains(self.client.get(reverse('grader:grade', args=[q.id])), '← 返回總覽')
+
+    def test_settings_has_add_buttons(self):
+        r = self.client.get(reverse('grader:exam_settings', args=[self.exam.id]))
+        self.assertContains(r, 'data-add-form="q"')
+        self.assertContains(r, 'name="q-__prefix__-code"')
+
+    def test_upload_case_files_appends_in_order(self):
+        q = Question.objects.create(exam=self.exam, code='A01', points=20)
+        Case.objects.create(question=q, input_text='old', expected_output='old', order=0)
+        sub = Submission.objects.create(question=q, student_id='S1', filename='', code='print(int(input())*2)')
+        files = [SimpleUploadedFile(n, d) for n, d in
+                 [('10.in', b'10\r\n'), ('10.out', b'20\n'), ('2.in', b'2\n'), ('2.out', b'4\n'), ('3.in', b'3\n')]]
+        r = self.client.post(reverse('grader:question_cases_upload', args=[q.id]), {'files': files}, follow=True)
+        self.assertContains(r, '3 缺少 .out 檔')
+        self.assertEqual([c.input_text for c in q.cases.all()], ['old', '2\n', '10\n'])
+        sub.refresh_from_db()
+        self.assertEqual([t['status'] for t in sub.test_results], ['error', 'pass', 'pass'])
+
+    def test_upload_case_files_replace(self):
+        q = Question.objects.create(exam=self.exam, code='A01', points=20)
+        Case.objects.create(question=q, input_text='old', expected_output='old')
+        self.client.post(reverse('grader:question_cases_upload', args=[q.id]), {
+            'replace': 'on', 'files': [SimpleUploadedFile('1.in', b'1'), SimpleUploadedFile('1.out', b'1')]})
+        self.assertEqual([c.input_text for c in q.cases.all()], ['1'])
 
     def test_settings_page_renders(self):
         r = self.client.get(reverse('grader:exam_settings', args=[self.exam.id]))

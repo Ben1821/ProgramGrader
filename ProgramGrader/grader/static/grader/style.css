@@ -40,6 +40,11 @@ button, .button { padding: 6px 14px; border: 1px solid var(--line); border-radiu
 .danger { color: var(--bad); }
 .danger-btn { background: var(--bad); color: #fff; border-color: var(--bad); }
 .inline-form { margin: 12px 0; }
+.back { display: inline-block; margin-bottom: 12px; text-decoration: none; }
+.folder { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 14px; margin-bottom: 10px; }
+.folder summary { cursor: pointer; font-weight: 600; }
+.upload-box { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 14px 8px; }
+table.grid + template + button, #t-rows + template + button { margin-top: 8px; }
 
 table.grid { border-collapse: collapse; background: var(--panel); }
 table.grid th, table.grid td { border: 1px solid var(--line); padding: 6px 10px; vertical-align: top; }
