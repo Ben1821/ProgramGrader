@@ -64,6 +64,12 @@ class ScoringTests(TestCase):
         self.assertEqual((p['total']['done'], p['total']['submitted'], p['total']['percent']), (1, 3, 33))
         self.assertFalse(student_rows(self.exam)[1]['complete'])
 
+    def test_progress_never_rounds_up_to_100(self):
+        for n in range(200):
+            make_sub(self.q1, f'S{n:03d}', graded=n > 0)
+        p = progress(student_rows(self.exam), [self.q1, self.q2])
+        self.assertEqual(p['questions'][0]['percent'], 99)
+
     def test_fmt(self):
         self.assertEqual(fmt(D('12.50')), '12.5')
         self.assertEqual(fmt(D('10.00')), '10')

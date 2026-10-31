@@ -40,7 +40,8 @@ def progress(rows, questions):
     total = {k: sum(c[k] for c in per_q) for k in keys}
     for c in per_q + [total]:
         c['submitted'] = c['done'] + c['pending'] + c['review']
-        c['percent'] = round(c['done'] * 100 / c['submitted']) if c['submitted'] else None
+        # 無條件捨去：999/1000 不能顯示成 100%
+        c['percent'] = c['done'] * 100 // c['submitted'] if c['submitted'] else None
     return {'questions': per_q, 'total': total}
 
 
