@@ -1,11 +1,11 @@
 {% extends 'grader/base.html' %}
-{% block back %}<a class="back" href="{% url 'grader:exam_settings' exam.id %}">← 返回考卷設定</a>{% endblock %}
+{% block back %}<a class="back" href="{{ back_url }}">← 返回</a>{% endblock %}
 {% block content %}
 <h1>確定刪除{{ label }}？</h1>
-<p>這會一併刪除 {% if submissions %}{{ submissions }} 份繳交與 {% endif %}{{ scores }} 筆人工分數，無法復原。</p>
+<p>這會一併刪除 {{ impact }}，無法復原。</p>
 <form method="post">
   {% csrf_token %}
   <button type="submit" class="danger-btn">確定刪除</button>
-  <a href="{% url 'grader:exam_settings' exam.id %}">取消</a>
+  <a href="{{ back_url }}">取消</a>
 </form>
 {% endblock %}

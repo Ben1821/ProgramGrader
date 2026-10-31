@@ -56,6 +56,30 @@ class SettingsViewTests(TestCase):
         html = self.client.get(reverse('grader:home') + f'?open={folder.id}').content.decode()
         self.assertEqual(html.count('<details class="folder" open'), 1)
 
+    def test_delete_exam_confirms_then_deletes(self):
+        q = Question.objects.create(exam=self.exam, code='A01', points=20)
+        Submission.objects.create(question=q, student_id='S1', filename='', code='')
+        url = reverse('grader:exam_delete', args=[self.exam.id])
+        self.assertContains(self.client.get(url), '1 題、1 份繳交與 0 筆人工分數')
+        self.assertTrue(Exam.objects.exists())
+        r = self.client.post(url)
+        self.assertRedirects(r, reverse('grader:home') + f'?open={self.exam.folder_id}')
+        self.assertFalse(Exam.objects.exists())
+        self.assertFalse(Submission.objects.exists())
+        self.assertTrue(Folder.objects.exists())
+
+    def test_delete_folder_removes_its_exams_only(self):
+        other = Exam.create_with_defaults('B', Folder.objects.create(name='其他'))
+        url = reverse('grader:folder_delete', args=[self.exam.folder_id])
+        self.assertContains(self.client.get(url), '1 份考卷')
+        self.assertRedirects(self.client.post(url), reverse('grader:home'))
+        self.assertEqual(list(Exam.objects.all()), [other])
+
+    def test_home_has_delete_links(self):
+        r = self.client.get(reverse('grader:home'))
+        self.assertContains(r, reverse('grader:folder_delete', args=[self.exam.folder_id]))
+        self.assertContains(r, reverse('grader:exam_delete', args=[self.exam.id]))
+
     def test_back_links(self):
         q = Question.objects.create(exam=self.exam, code='A01', points=20)
         self.assertContains(self.client.get(reverse('grader:exam_settings', args=[self.exam.id])),

@@ -108,29 +108,52 @@ def question_rerun(request, pk):
     return redirect('grader:question_cases', question.id)
 
 
+def folder_delete(request, pk):
+    folder = get_object_or_404(Folder, pk=pk)
+    subs = Submission.objects.filter(question__exam__folder=folder)
+    impact = (f'{folder.exams.count()} 份考卷、{subs.count()} 份繳交與 '
+              f'{CriterionScore.objects.filter(submission__in=subs).count()} 筆人工分數')
+    return _confirm_delete(request, folder, f'資料夾「{folder.name}」', reverse('grader:home'), impact)
+
+
+def exam_delete(request, pk):
+    exam = get_object_or_404(Exam, pk=pk)
+    subs = Submission.objects.filter(question__exam=exam)
+    impact = (f'{exam.questions.count()} 題、{subs.count()} 份繳交與 '
+              f'{CriterionScore.objects.filter(submission__in=subs).count()} 筆人工分數')
+    return _confirm_delete(request, exam, f'考卷「{exam.name}」',
+                           f"{reverse('grader:home')}?open={exam.folder_id}", impact, exam=exam)
+
+
 def question_delete(request, pk):
     question = get_object_or_404(Question, pk=pk)
-    return _confirm_delete(request, question, f'題目 {question.code}', question.exam,
-                           question.submissions.count(),
-                           CriterionScore.objects.filter(submission__question=question).count())
+    impact = (f'{question.submissions.count()} 份繳交與 '
+              f'{CriterionScore.objects.filter(submission__question=question).count()} 筆人工分數')
+    return _confirm_delete(request, question, f'題目 {question.code}',
+                           reverse('grader:exam_settings', args=[question.exam_id]), impact, exam=question.exam)
 
 
 def criterion_delete(request, pk):
     criterion = get_object_or_404(Criterion, pk=pk)
-    return _confirm_delete(request, criterion, f'評分項目「{criterion.name}」', criterion.exam,
-                           0, criterion.scores.count())
-
-
-def _confirm_delete(request, obj, label, exam, submissions, scores):
+    exam = criterion.exam
+    response = _confirm_delete(request, criterion, f'評分項目「{criterion.name}」',
+                               reverse('grader:exam_settings', args=[exam.id]),
+                               f'{criterion.scores.count()} 筆人工分數', exam=exam)
     if request.method == 'POST':
-        obj.delete()
-        messages.success(request, f'已刪除{label}')
         total = sum(c.weight for c in exam.criteria.all())
         if total != 100:
             messages.warning(request, f'評分項目比例加總目前為 {fmt(total)}%，請調整為 100% 後儲存')
-        return redirect('grader:exam_settings', exam.id)
+    return response
+
+
+def _confirm_delete(request, obj, label, back_url, impact, exam=None):
+    """GET 顯示會一併刪掉哪些資料，POST 才真的刪除並回到 back_url。"""
+    if request.method == 'POST':
+        obj.delete()
+        messages.success(request, f'已刪除{label}')
+        return redirect(back_url)
     return render(request, 'grader/confirm_delete.html',
-                  {'exam': exam, 'label': label, 'submissions': submissions, 'scores': scores})
+                  {'exam': exam, 'label': label, 'impact': impact, 'back_url': back_url})
 
 
 def exam_upload(request, pk):
