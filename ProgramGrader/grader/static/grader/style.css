@@ -13,16 +13,23 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text);
   font: 15px/1.6 -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
-a { color: var(--accent); }
+a { color: var(--accent); text-underline-offset: 2px; }
+::selection { background: #cfe0ff; }
+a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; }
+input[type=file]::file-selector-button { font: inherit; padding: 6px 14px; margin-right: 10px; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--text); }
+.table-wrap { position: relative; max-width: 100%; overflow-x: auto; }  /* 讓 .sr-only 留在容器內 */
+.note { font-size: 12px; color: #8a3b0f; }
 main { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
 h1 { font-size: 22px; margin: 0 0 12px; }
 h2 { font-size: 17px; margin: 20px 0 8px; }
 h3 { font-size: 15px; margin: 16px 0 8px; }
 
-.topbar { display: flex; align-items: center; gap: 12px; padding: 10px 24px;
+.topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 10px 24px;
   background: var(--panel); border-bottom: 1px solid var(--line); }
 .topbar .brand { font-weight: 700; text-decoration: none; color: var(--text); }
-.topbar nav { margin-left: auto; display: flex; gap: 16px; }
+.topbar nav { margin-left: auto; display: flex; gap: 16px; white-space: nowrap; }
 .crumb, .muted { color: var(--muted); }
 .hint { color: var(--muted); font-size: 14px; }
 .warn { color: var(--bad); }
@@ -43,7 +50,15 @@ button, .button { padding: 6px 14px; border: 1px solid var(--line); border-radiu
 .inline-form { margin: 12px 0; }
 .back { display: inline-block; margin-bottom: 12px; text-decoration: none; }
 .folder { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 14px; margin-bottom: 10px; }
-.folder summary { cursor: pointer; font-weight: 600; }
+.folder summary { cursor: pointer; }
+.folder-name { font-weight: 600; }
+.folder summary .muted { font-size: 13px; margin-left: 4px; }
+.exam-list { list-style: none; margin: 10px 0 4px; padding: 0; }
+.exam-list li { display: flex; align-items: baseline; gap: 12px; padding: 4px 0; border-top: 1px solid var(--line); }
+.exam-list li:first-child { border-top: 0; }
+.exam-list .exam-name { min-width: 8em; }
+.add-exam input[type=text] { width: 260px; max-width: 100%; }
+.case input[type=number] { width: 80px; }
 .upload-box { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 14px 8px; }
 table.grid + template + button, #t-rows + template + button { margin-top: 8px; }
 
@@ -91,7 +106,7 @@ table.overview thead th { position: sticky; top: 0; z-index: 2; background: #f0f
 .bar > span { display: block; height: 100%; background: var(--ok); }
 .bar-wide { width: 100%; }
 .bar-label { margin-left: 8px; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
-.progress-counts { display: grid; grid-template-columns: repeat(4, auto); gap: 4px 16px; margin: 12px 0; }
+.progress-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 4px 16px; margin: 12px 0; }
 .progress-counts div { display: flex; flex-direction: column; }
 .progress-counts dt { font-size: 13px; color: var(--muted); }
 .progress-counts dt .mark { margin: 0 4px 0 0; }
@@ -109,6 +124,7 @@ table.overview thead th { position: sticky; top: 0; z-index: 2; background: #f0f
 .student-search { display: flex; align-items: center; gap: 6px; font-size: 14px; }
 .student-search input { width: 150px; }
 .search-status { color: var(--bad); font-size: 13px; }
+.progress-panel > * { min-width: 0; }
 @media (max-width: 900px) { .progress-panel { grid-template-columns: 1fr; } }
 
 /* 批改頁：側邊欄分頁 */
@@ -179,3 +195,8 @@ pre.code { background: var(--panel); border: 1px solid var(--line); border-radiu
 .grade-form label { display: block; font-weight: 600; }
 .grade-form input[type=number] { width: 100px; }
 @media (max-width: 900px) { .grade-layout { grid-template-columns: 1fr; } .side, .grade-form { position: static; max-height: none; } }
+.exam-list .small { margin-left: 0; }
+@media (max-width: 600px) {
+  main { padding: 16px; }
+  .topbar { padding: 10px 16px; }
+}

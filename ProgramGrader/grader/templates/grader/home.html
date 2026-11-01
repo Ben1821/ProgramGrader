@@ -10,18 +10,18 @@
 
 {% for folder in folders %}
   <details class="folder" {% if open_id == folder.id|stringformat:'d' %}open{% endif %}>
-    <summary>📁 {{ folder.name }} <span class="muted">（{{ folder.exams.all|length }} 份考卷）</span>
+    <summary><span class="folder-name">{{ folder.name }}</span> <span class="muted">{{ folder.exams.all|length }} 份考卷</span>
       <a class="danger small" href="{% url 'grader:folder_delete' folder.id %}">刪除資料夾</a></summary>
     <ul class="exam-list">
       {% for e in folder.exams.all %}
-        <li><a href="{% url 'grader:exam_overview' e.id %}">{{ e.name }}</a>
-          <span class="muted">（<a href="{% url 'grader:exam_settings' e.id %}">設定</a>）</span>
+        <li><a class="exam-name" href="{% url 'grader:exam_overview' e.id %}">{{ e.name }}</a>
+          <a class="small" href="{% url 'grader:exam_settings' e.id %}">設定</a>
           <a class="danger small" href="{% url 'grader:exam_delete' e.id %}">刪除</a></li>
       {% empty %}
         <li class="muted">這個資料夾還沒有考卷</li>
       {% endfor %}
     </ul>
-    <form method="post" action="{% url 'grader:exam_create' %}" class="inline-form">
+    <form method="post" action="{% url 'grader:exam_create' %}" class="inline-form add-exam">
       {% csrf_token %}
       <input type="hidden" name="folder" value="{{ folder.id }}">
       <input type="text" name="name" maxlength="100" required placeholder="考卷名稱，例如 A 或 期中考"

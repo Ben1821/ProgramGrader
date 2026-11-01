@@ -46,6 +46,11 @@ class QuestionForm(forms.ModelForm):
         model = Question
         fields = ['code', 'points', 'time_limit', 'order']
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.initial['points'] = fmt(self.instance.points)
+
     def clean_code(self):
         return self.cleaned_data['code'].upper()
 

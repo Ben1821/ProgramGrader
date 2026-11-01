@@ -10,6 +10,7 @@ target_fingerprint: "sha256:3ce44cf472dfe50e6a3041ffc88895d0044a623d1db6d81c1675
 target_path: /Users/yehweipingrubi/Desktop/Django/ProgramGrader/ProgramGrader/grader/templates/grader/overview.html
 timestamp: 2026-10-31T11-55-13Z
 slug: der-grader-templates-grader-overview-html-c42a3689
+closed: true
 ---
 Method: dual-agent (A: design review · B: detector + browser)
 

@@ -6,7 +6,7 @@
   <td>
     {% if f.instance.pk %}
       <a href="{% url 'grader:question_cases' f.instance.pk %}">{{ f.instance.cases.count }} 組測資</a>
-      {% if not f.instance.cases.exists %}<div class="warn">此題沒有測資，將視為全部通過</div>{% endif %}
+      {% if not f.instance.cases.exists %}<div class="note">無測資，視為全部通過</div>{% endif %}
     {% else %}<span class="muted">儲存後可設定</span>{% endif %}
   </td>
   <td>{% if f.instance.pk %}<a class="danger" href="{% url 'grader:question_delete' f.instance.pk %}">刪除</a>{% endif %}</td>

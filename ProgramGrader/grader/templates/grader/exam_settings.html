@@ -19,12 +19,12 @@
     <p class="hint">每題：測資全過得配分的 1/2，沒全過（含超時、執行錯誤）得 1/4；另外 1/2 由下方評分項目人工評。新增的題目按「儲存設定」後才會建立。</p>
     {{ questions.management_form }}
     {{ questions.non_form_errors }}
-    <table class="grid">
+    <div class="table-wrap"><table class="grid">
       <thead><tr><th>題號</th><th>配分</th><th>時間限制（秒）</th><th>順序</th><th>測資</th><th></th></tr></thead>
       <tbody id="q-rows">
         {% for f in questions %}{% include 'grader/_question_row.html' %}{% endfor %}
       </tbody>
-    </table>
+    </table></div>
     <template id="q-empty">{% include 'grader/_question_row.html' with f=questions.empty_form %}</template>
     <button type="button" data-add-form="q">＋ 新增題目</button>
     <p class="hint">題號：{{ questions.empty_form.code.help_text }}。配分：{{ questions.empty_form.points.help_text }}。時間限制：{{ questions.empty_form.time_limit.help_text }}。</p>
@@ -35,12 +35,12 @@
     <p class="hint">每題人工部分的總額是配分的 1/2，依比例分給各項。{{ criteria.empty_form.weight.help_text }}。</p>
     {{ criteria.management_form }}
     {% if criteria.non_form_errors %}<div class="error">{{ criteria.non_form_errors }}</div>{% endif %}
-    <table class="grid">
+    <div class="table-wrap"><table class="grid">
       <thead><tr><th>項目名稱</th><th>比例 (%)</th><th>說明</th><th>順序</th><th></th></tr></thead>
       <tbody id="c-rows">
         {% for f in criteria %}{% include 'grader/_criterion_row.html' %}{% endfor %}
       </tbody>
-    </table>
+    </table></div>
     <template id="c-empty">{% include 'grader/_criterion_row.html' with f=criteria.empty_form %}</template>
     <button type="button" data-add-form="c">＋ 新增評分項目</button>
   </section>
