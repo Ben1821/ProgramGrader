@@ -64,6 +64,15 @@ class ScoringTests(TestCase):
         self.assertEqual((p['total']['done'], p['total']['submitted'], p['total']['percent']), (1, 3, 33))
         self.assertFalse(student_rows(self.exam)[1]['complete'])
 
+    def test_progress_sorted_by_todo_with_done_last(self):
+        make_sub(self.q1, 'S1', graded=True)
+        make_sub(self.q2, 'S1')
+        make_sub(self.q2, 'S2', scores=[1])
+        p = progress(student_rows(self.exam), [self.q1, self.q2])
+        self.assertEqual([c['question'].code for c in p['questions']], ['A02', 'A01'])
+        a02 = p['questions'][0]
+        self.assertEqual((a02['todo'], a02['bar']['review'], a02['bar']['done']), (2, 50.0, 0))
+
     def test_progress_never_rounds_up_to_100(self):
         for n in range(200):
             make_sub(self.q1, f'S{n:03d}', graded=n > 0)

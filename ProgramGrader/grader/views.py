@@ -1,4 +1,5 @@
 import difflib
+from decimal import Decimal
 from urllib.parse import quote
 
 from django.contrib import messages
@@ -175,8 +176,9 @@ def exam_overview(request, pk):
     exam = get_object_or_404(Exam, pk=pk)
     questions = list(exam.questions.all())
     rows = student_rows(exam)
-    return render(request, 'grader/overview.html', {'exam': exam, 'questions': questions, 'rows': rows,
-                                                    'progress': progress(rows, questions)})
+    return render(request, 'grader/overview.html', {
+        'exam': exam, 'questions': questions, 'rows': rows, 'progress': progress(rows, questions),
+        'total_points': sum((q.points for q in questions), Decimal('0'))})
 
 
 def exam_csv(request, pk):

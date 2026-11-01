@@ -10,7 +10,7 @@ def score(value):
     return fmt(value)
 
 
-STATUS_LABELS = {'done': '已完成', 'pending': '待人工評分', 'review': '需複查', 'missing': '未交'}
+STATUS_LABELS = {'done': '已改', 'pending': '待改', 'review': '需複查', 'missing': '未交'}
 
 
 @register.filter

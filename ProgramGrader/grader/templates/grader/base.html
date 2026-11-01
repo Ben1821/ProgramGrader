@@ -12,9 +12,11 @@
     {% if exam %}
       <span class="crumb">› <a href="{% url 'grader:home' %}?open={{ exam.folder_id }}">{{ exam.folder.name }}</a> › {{ exam.name }}</span>
       <nav>
-        <a href="{% url 'grader:exam_overview' exam.id %}">總覽</a>
-        <a href="{% url 'grader:exam_settings' exam.id %}">設定</a>
-        <a href="{% url 'grader:exam_upload' exam.id %}">上傳</a>
+        {% with page=request.resolver_match.url_name %}
+        <a href="{% url 'grader:exam_overview' exam.id %}"{% if page == 'exam_overview' %} aria-current="page"{% endif %}>總覽</a>
+        <a href="{% url 'grader:exam_settings' exam.id %}"{% if page == 'exam_settings' %} aria-current="page"{% endif %}>設定</a>
+        <a href="{% url 'grader:exam_upload' exam.id %}"{% if page == 'exam_upload' %} aria-current="page"{% endif %}>上傳</a>
+        {% endwith %}
       </nav>
     {% endif %}
   </header>

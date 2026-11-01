@@ -2,10 +2,10 @@
   --bg: #f7f7f5;
   --panel: #ffffff;
   --text: #1f2328;
-  --muted: #6b7280;
+  --muted: #5f6672;
   --line: #e2e2dd;
-  --accent: #2f6fdb;
-  --ok: #1f8a4c;
+  --accent: #2860c8;
+  --ok: #1a7a43;
   --bad: #c2410c;
   --warn-bg: #fff7e6;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -69,7 +69,7 @@ table.grid input[type=number] { width: 90px; }
 /* 成績總覽：大班也要能用。外層容器捲動，表頭、學號欄、總分欄固定 */
 .overview-legend { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 24px; margin-bottom: 8px; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--muted); }
-.table-scroll { overflow: auto; max-height: calc(100vh - 14rem); width: fit-content; max-width: 100%;
+.table-scroll { overflow: auto; max-height: calc(100vh - 7rem);  /* 跳到成績表後幾乎佔滿視窗 */ width: fit-content; max-width: 100%;
   border: 1px solid var(--line); border-radius: 6px; background: var(--panel);
   position: relative; }  /* 讓 .sr-only 等絕對定位元素留在捲動容器內 */
 .table-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -99,14 +99,16 @@ table.overview thead th { position: sticky; top: 0; z-index: 2; background: #f0f
 .overview tr.found .col-student { box-shadow: inset 3px 0 0 var(--accent); }
 
 /* 總覽：進度區 */
-.progress-panel { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 16px 32px; align-items: start;
+.progress-panel { display: grid; grid-template-columns: minmax(240px, 300px) 1fr; gap: 16px 32px; align-items: start;
   background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px 20px; margin-bottom: 24px; }
 .progress-summary h2 { margin: 0 0 8px; font-size: 16px; }
-.bar { display: inline-block; width: 120px; height: 8px; border-radius: 4px; background: #e6e6e1; overflow: hidden; vertical-align: middle; }
-.bar > span { display: block; height: 100%; background: var(--ok); }
+.bar { display: inline-flex; width: 120px; height: 8px; border-radius: 4px; background: #e6e6e1; overflow: hidden; vertical-align: middle; }
+.bar > span { height: 100%; }
+.seg-done { background: var(--ok); }
+.seg-review { background: #b42318; }  /* 待改段留空（底色） */
 .bar-wide { width: 100%; }
 .bar-label { margin-left: 8px; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
-.progress-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 4px 16px; margin: 12px 0; }
+.progress-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(52px, 1fr)); gap: 4px 10px; margin: 12px 0; }
 .progress-counts div { display: flex; flex-direction: column; }
 .progress-counts dt { font-size: 13px; color: var(--muted); }
 .progress-counts dt .mark { margin: 0 4px 0 0; }
@@ -115,10 +117,26 @@ table.overview thead th { position: sticky; top: 0; z-index: 2; background: #f0f
 .export p { margin: 0 0 8px; font-size: 14px; }
 .export-warn p { color: #8a3b0f; }
 .export-ok p { color: var(--ok); }
-.progress-table { border-collapse: collapse; width: 100%; font-size: 14px; }
-.progress-table th, .progress-table td { padding: 5px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
-.progress-table thead th { font-size: 12px; font-weight: 600; color: #5b616b; }
-.progress-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.q-progress-title { margin: 0 0 6px; font-size: 14px; }
+.q-progress-title .muted { font-size: 12px; font-weight: 400; }
+.q-progress { list-style: none; margin: 0; padding: 0; display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr)); column-gap: 28px; }
+.q-progress li { display: grid; grid-template-columns: 3.2em 80px 4.8em 1fr auto; align-items: center; gap: 8px;
+  padding: 4px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.q-progress .bar { width: 80px; }
+.q-progress .bar-label { margin: 0; }
+.q-progress li.q-done { color: var(--muted); }
+.q-code { font-weight: 600; white-space: nowrap; }
+.q-empty { grid-column: span 2; }
+.q-counts { display: flex; gap: 10px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.q-action { white-space: nowrap; justify-self: end; }
+.jump { margin-left: 12px; font-size: 13px; }
+.score-section { scroll-margin-top: 8px; }
+.total-partial { font-weight: 400; color: var(--muted); }
+table.overview.show-todo-only tr[data-complete="true"] { display: none; }
+.only-todo { font-size: 14px; }
+.legend { margin: 0 0 8px; }
+.topbar nav [aria-current=page] { color: var(--text); font-weight: 600; text-decoration: none; }
 .review-count { color: #b42318; font-weight: 600; }
 .overview-legend h2 { margin: 0; font-size: 16px; }
 .student-search { display: flex; align-items: center; gap: 6px; font-size: 14px; }
@@ -198,5 +216,7 @@ pre.code { background: var(--panel); border: 1px solid var(--line); border-radiu
 .exam-list .small { margin-left: 0; }
 @media (max-width: 600px) {
   main { padding: 16px; }
+  .q-progress li { display: flex; flex-wrap: wrap; column-gap: 10px; }
+  .q-action { margin-left: auto; }
   .topbar { padding: 10px 16px; }
 }

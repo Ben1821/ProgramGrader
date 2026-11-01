@@ -196,7 +196,7 @@ class UploadAndOverviewTests(TestCase):
         Question.objects.create(exam=self.exam, code='A02', points=10, order=1)
         Submission.objects.create(question=self.q, student_id='S1', filename='', code='')
         r = self.client.get(reverse('grader:exam_overview', args=[self.exam.id]))
-        self.assertContains(r, 'S1 A01：5 分，待人工評分')
+        self.assertContains(r, 'S1 A01：5 分，待改')
         self.assertContains(r, 'class="cell-missing"')
         self.assertContains(r, '<th scope="row" class="col-student">S1</th>', html=False)
 
@@ -230,6 +230,16 @@ class ProgressOverviewTests(TestCase):
         self.assertContains(r, '已改 1 / 1 份（100%）')
         self.assertNotContains(self.client.get(reverse('grader:exam_settings', args=[self.exam.id])),
                                reverse('grader:exam_csv', args=[self.exam.id]))
+
+    def test_review_cell_and_partial_total_explained(self):
+        sub = Submission.objects.create(question=self.q, student_id='S1', filename='', code='')
+        CriterionScore.objects.create(submission=sub, criterion=self.exam.criteria.first(), score=1)
+        r = self.client.get(self.url)
+        self.assertContains(r, '需複查，人工分暫不計入')
+        self.assertContains(r, '<span class="sr-only">（尚未改完）</span>', html=False)
+        self.assertContains(r, '繼續批改<span class="sr-only"> A01</span>', html=False)
+        self.assertContains(r, '滿分 20')
+        self.assertContains(r, 'aria-current="page">總覽', html=False)
 
     def test_search_target_rows_have_ids(self):
         Submission.objects.create(question=self.q, student_id='D1234567', filename='', code='')

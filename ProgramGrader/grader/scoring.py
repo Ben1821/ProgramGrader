@@ -40,8 +40,13 @@ def progress(rows, questions):
     total = {k: sum(c[k] for c in per_q) for k in keys}
     for c in per_q + [total]:
         c['submitted'] = c['done'] + c['pending'] + c['review']
+        c['todo'] = c['pending'] + c['review']
         # 無條件捨去：999/1000 不能顯示成 100%
         c['percent'] = c['done'] * 100 // c['submitted'] if c['submitted'] else None
+        # 分段進度條寬度（%）：已改、需複查；待改留空顯示底色
+        c['bar'] = {k: round(c[k] * 100 / c['submitted'], 2) if c['submitted'] else 0
+                    for k in ('done', 'review')}
+    per_q.sort(key=lambda c: -c['todo'])  # 最多事要做的題目排前面，改完的沉到最後
     return {'questions': per_q, 'total': total}
 
 
